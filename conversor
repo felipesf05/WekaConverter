@@ -1,0 +1,139 @@
+__author__ = 'Felipe Santana'
+import pandas as pd
+import os
+
+class Conversor():
+    _dataset = ""
+    _treino = []
+    _classes = []
+    _features = []
+    _atributo_classe = ''
+    _arquivoWeka = 'descritores.arff'
+
+    def __init__(self):
+        pass
+
+    def getDataset(self):
+        return self._dataset
+
+    def setDataset(self,valor):
+        self._dataset = valor
+
+    def getClasses(self):
+        return self._classes
+
+    def setClasses(self,valor):
+        self._classes = valor
+
+    def getTreino(self):
+        return self._treino
+
+    def setTreino(self,valor):
+        self._treino = valor
+
+    def getFeatures(self):
+        return self._features
+
+    def setFeatures(self,valor):
+        self._features = valor
+
+    def getAtributoClasse(self):
+        return self._atributo_classe
+
+    def setAtributoClasse(self, valor):
+        self._atributo_classe = valor
+
+
+    def carrega_dados(self):
+        dados = pd.read_csv(self.getDataset(), sep=',')
+        return dados
+
+
+    def modela_dados(self,atributos_remover):
+        dados = self.carrega_dados()
+        self.setClasses(dados[self.getAtributoClasse()])                                #Coleta as classes do dataset.
+        for att in atributos_remover:
+                if att != '':
+                    dados = (dados.drop([att], axis=1))                                           #Retira o atributo imagens e classes do dataset.
+        dados = (dados.drop([self.getAtributoClasse()], axis=1))                        #Retira o atributo classes do dataset.
+        dados = dados.fillna(0)                                                         #Substituindo valores vazios por 0.
+        self.setFeatures(dados.columns.values)                                          #Setando os valores das features.
+        self.setTreino(dados)
+
+    def gera_arquivo_formato_weka(self,nome_arquivo):
+        nome_arquivo = nome_arquivo + '.arff'
+        arquivo = open(nome_arquivo, 'w')
+        arquivo.write('@relation ' + nome_arquivo + '\n')
+        arquivo.write('\n')
+        for feature in self.getFeatures():
+            tipo_feature = ' numeric'                                                        #Caso sejam features numericas o tipo do atributo sera numerico.
+            arquivo.write('@attribute '+ feature + tipo_feature+'\n')                        #Escreve o nome do atributo e seus valores possiveis.
+        arquivo.write('@attribute class {'+ str(self.getClasses().unique()).replace('[','').replace(']','').replace(' ',',') + '}')
+        arquivo.write('\n\n@data\n')                                                         #Declara a secao de dados.
+        dados = self.getTreino()
+        dados['Classe'] = self.getClasses()                                                  #Concatena o valor do treino com a classe para escrever no arquivo.
+        dados.to_csv(arquivo,index=False,header=False)
+        print ("Arquivo convertido: %s" %os.path.realpath(nome_arquivo))
+
+    def gera_arquivo_formato_weka_atributos_variavel(self, nome_arquivo, atributos_tipos):
+        nome_arquivo = nome_arquivo + '.arff'
+        arquivo = open(nome_arquivo, 'w')
+        arquivo.write('@relation ' + nome_arquivo + '\n')
+        arquivo.write('\n')
+        for att_tipo in str(atributos_tipos).split(','):
+            att_tipo = att_tipo.replace(':', ' ')                                                        #Caso sejam features numericas o tipo do atributo sera numerico.
+            arquivo.write('@attribute '+ att_tipo +'\n')                                                #Escreve o nome do atributo e seus valores possiveis.
+        arquivo.write('@attribute class {'+ str(self.getClasses().unique()).replace('[','').replace(']','').replace(' ',',') + '}')
+        arquivo.write('\n\n@data\n')                                                         #Declara a secao de dados.
+        dados = self.getTreino()
+        dados['Classe'] = self.getClasses()                                                  #Concatena o valor do treino com a classe para escrever no arquivo.
+        dados.to_csv(arquivo,index=False,header=False)
+        print ("Arquivo convertido: %s" %os.path.realpath(nome_arquivo))
+        pass
+
+    def extrai_dados_usuario(self):
+        print(49 * '#')
+        print('# \tCONVERSOR DE DATASET PARA O FORMATO ARRF \t#\n#\tAUTOR: Felipe Santana - 08/05/2014\t\t\t#')
+        print(49 * '#')
+        dataset = raw_input("\nEntre com o caminho do dataset: ")
+        if os.path.exists(dataset):
+            self.setDataset(dataset)
+            file = open(dataset,'r')
+            print ("Atributos:\n %s" %file.readline())
+        else:
+            print("Arquivo nao encontrado!")
+            exit(0)
+
+        atributo_classe=''
+        while (atributo_classe == ''):
+            atributo_classe = raw_input("Entre com o nome do atributo classe: ")
+
+        self.setAtributoClasse(atributo_classe)
+
+        atributos_remover=[]
+        while (len(atributos_remover) == 0):
+            atributos_remover = raw_input("Entre com os atributos a serem removidos (separado por virgula): ")
+            atributos_remover = atributos_remover.split(',')
+
+        atributos_variaveis=''
+        while (atributos_variaveis == ''):
+            atributos_variaveis = raw_input("Possui atributos com tipos variaveis? 1-Sim, 2 Nao: ")
+
+        if atributos_variaveis == '1':
+            atributos_tipos = raw_input("Entre com os atributos e seus tipos separados por virgula (ex: att1:nominal,att2:real) : ")
+
+        nome_arquivo_weka=''
+        while (nome_arquivo_weka == ''):
+            nome_arquivo_weka = raw_input("Digite o nome do arquivo a ser criado: ")
+
+        self.modela_dados(atributos_remover)
+
+        if atributos_variaveis == '2':
+            self.gera_arquivo_formato_weka(nome_arquivo_weka)
+        elif atributos_variaveis =='1':
+            self.gera_arquivo_formato_weka_atributos_variavel(nome_arquivo_weka,atributos_tipos)
+
+
+
+conv = Conversor()
+conv.extrai_dados_usuario()
